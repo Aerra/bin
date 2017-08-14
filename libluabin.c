@@ -32,7 +32,8 @@ uint64_t bin_le64toh (uint64_t x) {	return le64toh(x); }
 uint64_t decode_reb(unsigned char *p) {
 	uint64_t val = (*p & 0x7f);
 	p++;
-	for (uint32_t i = 1; *(p-1) & 0x80; i++, p++) {
+	uint32_t i = 1;
+	for (; *(p-1) & 0x80; i++, p++) {
 		assert(i < 9);
 		val += (*p & 0x7f) << (i * 7);
 	}
