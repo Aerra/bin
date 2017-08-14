@@ -228,7 +228,7 @@ do -- base_buf
 		while _[sz] and n >= _[sz] do sz = sz + 1 end
 
 		local p = ffi.cast(uint8_t, self:alloc(sz))
-		ffi.C.encode_ber(ffi.cast('uint64_t', n), p, ffi.cast('size_t', sz))
+		ffi.C.encode_ber(ffi.cast('uint64_t', n), p, sz)
 	end
 
 	function buf.reb (self, n)

@@ -57,7 +57,7 @@ void encode_ber(uint64_t n, char *buf, size_t numsize) {
 	char *ptr = buf;
 	int i = numsize - 1;
 	for (; i > 0; i--) {
-		*ptr++ = (n >> 7*i) & 0x80;
+		*ptr++ = (n >> 7*i) | 0x80;
 	}
 	*ptr = n & 0x7f;
 	return;
