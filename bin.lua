@@ -79,6 +79,9 @@ ffi.fundef('bin_hex',[[
 ffi.fundef('encode_reb',[[
 	void encode_reb(uint64_t n, char *buf);
 ]])
+ffi.fundef('encode_ber',[[
+	void encode_ber(uint64_t n, char *buf, size_t numsize);
+]])
 ffi.fundef('decode_reb',[[
 	uint64_t decode_reb(unsigned char *p);
 ]])
@@ -214,44 +217,29 @@ do -- base_buf
 	-- end
 	-- func = func .. "end\nend\n"
 
-	buf.ber = function (self, n)
-		local _ = { 0x80ULL,0x4000ULL,0x200000ULL,0x10000000ULL,0x800000000ULL,0x40000000000ULL,0x2000000000000ULL,0x100000000000000ULL }
-
-		local bs = 1
-		while n >= _[bs] then bs = bs + 1 end
-
-		local p = ffi.cast(uint8_t, self:alloc(bs))
-		ffi.C.encode_reb(ffi.cast('uint64_t', n), p)
-	end
-
-	-- local func = [[
-	-- 	local ffi = require 'ffi'
-	-- 	local uint8_t  = ffi.typeof('uint8_t *')
-	-- 	return function(self,n)
-	-- ]]
-	-- for i = 1,9 do
-	-- 	local lim = bit.lshift(1ULL,7*i)
-	-- 	if i == 1 then
-	-- 		func = func .. "if n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
-	-- 	elseif i == 9 then
-	-- 		func = func .. "else --- < "..string.format("0x%xULL",tonumber(lim)).."\n"
-	-- 	else
-	-- 		func = func .. "elseif n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
-	-- 	end
-	-- 	func = func .. "\tlocal p = ffi.cast(uint8_t,self:alloc("..i.."))\n"
-	-- 	func = func .. "\tp[0] = bit.bor(0x80, n)\n"
-	-- 	if i > 1 then
-	-- 		for ptr = 1,i-2 do
-	-- 			func = func .. "\tp["..ptr.."] = bit.bor(0x80, bit.rshift(n,"..( 7*(ptr) ).."))\n"
-	-- 		end
-	-- 	end
-	-- 	func = func .. "\tp["..(i-1).."] = bit.band(0x7f, bit.rshift(n,"..( 7*(i-1) ).."))\n"
-	-- end
-	-- func = func .. "end\nend\n"
-
 	-- print(func)
 
-	-- buf.reb = dostring( func )
+	-- buf.ber = dostring(func)
+
+	function buf.ber (self, n)
+		local _ = { 0x80ULL,0x4000ULL,0x200000ULL,0x10000000ULL,0x800000000ULL,0x40000000000ULL,0x2000000000000ULL,0x100000000000000ULL,0x800000000000000ULL }
+
+		local sz = 1
+		while _[sz] and n >= _[sz] do sz = sz + 1 end
+
+		local p = ffi.cast(uint8_t, self:alloc(sz))
+		ffi.C.encode_ber(ffi.cast('uint64_t', n), p, ffi.cast('size_t', sz))
+	end
+
+	function buf.reb (self, n)
+		local _ = { 0x80ULL,0x4000ULL,0x200000ULL,0x10000000ULL,0x800000000ULL,0x40000000000ULL,0x2000000000000ULL,0x100000000000000ULL,0x800000000000000ULL }
+
+		local sz = 1
+		while _[sz] and n >= _[sz] do sz = sz + 1 end
+
+		local p = ffi.cast(uint8_t, self:alloc(sz))
+		ffi.C.encode_reb(ffi.cast('uint64_t', n), p)
+	end
 
 	function buf:char(x)
 		local p = self:alloc(1)

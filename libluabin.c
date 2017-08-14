@@ -43,14 +43,23 @@ uint64_t decode_reb(unsigned char *p) {
 void encode_reb(uint64_t n, char *buf) {
 	if (n <= 0x7f) {
 		*buf = (char) n;
-	}
-	else {
+	} else {
 		char *ptr = buf;
 		while(n) {
-			( *ptr++)  = (n & 0x7f) | ( n > 0x7f ? 0x80 : 0 );
+			*ptr++ = (n & 0x7f) | ( n > 0x7f ? 0x80 : 0 );
 			n >>= 7;
 		}
 	}
+	return;
+}
+
+void encode_ber(uint64_t n, char *buf, size_t numsize) {
+	char *ptr = buf;
+	int i = numsize - 1;
+	for (; i > 0; i--) {
+		*ptr++ = (n >> 7*i) & 0x80;
+	}
+	*ptr = n & 0x7f;
 	return;
 }
 
