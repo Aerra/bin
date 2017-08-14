@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <assert.h>
 #include "portable_endian.h"
 #include "xd.h"
 
@@ -27,6 +28,30 @@ uint64_t bin_htobe64 (uint64_t x) { return htobe64(x); }
 uint64_t bin_htole64 (uint64_t x) {	return htole64(x); }
 uint64_t bin_be64toh (uint64_t x) { return be64toh(x); }
 uint64_t bin_le64toh (uint64_t x) {	return le64toh(x); }
+
+uint64_t decode_reb(unsigned char *p) {
+	uint64_t val = (*p & 0x7f);
+	p++;
+	for (uint32_t i = 1; *(p-1) & 0x80; i++, p++) {
+		assert(i < 9);
+		val += (*p & 0x7f) << (i * 7);
+	}
+	return val;
+}
+
+void encode_reb(uint64_t n, char *buf) {
+	if (n <= 0x7f) {
+		*buf = (char) n;
+	}
+	else {
+		char *ptr = buf;
+		while(n) {
+			( *ptr++)  = (n & 0x7f) | ( n > 0x7f ? 0x80 : 0 );
+			n >>= 7;
+		}
+	}
+	return;
+}
 
 char * bin_hex(unsigned char *p, size_t size) {
 	char *rv = malloc(size*2+1);

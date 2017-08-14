@@ -76,6 +76,12 @@ ffi.fundef('bin_le64toh',[[uint64_t bin_le64toh (uint64_t x);]]) function M.le64
 ffi.fundef('bin_hex',[[
 	char * bin_hex(char *p, size_t size);
 ]])
+ffi.fundef('encode_reb',[[
+	void encode_reb(uint64_t n, char *buf);
+]])
+ffi.fundef('decode_reb',[[
+	uint64_t decode_reb(unsigned char *p);
+]])
 ffi.fundef('free',[[
 	void free (void *);
 ]])
@@ -184,60 +190,68 @@ do -- base_buf
 	end
 	buf.f = buf.float;
 
-	local func = [[
-		local ffi = require 'ffi'
-		local uint8_t  = ffi.typeof('uint8_t *')
-		return function(self,n)
-	]]
-	for i = 1,9 do
-		local lim = bit.lshift(1ULL,7*i)
-		if i == 1 then
-			func = func .. "if n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
-		elseif i == 9 then
-			func = func .. "else --- < "..string.format("0x%xULL",tonumber(lim)).."\n"
-		else
-			func = func .. "elseif n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
-		end
-		func = func .. "\tlocal p = ffi.cast(uint8_t,self:alloc("..i.."))\n"
-		if i > 1 then
-			for ptr = 0,i-2 do
-				func = func .. "\tp["..ptr.."] = bit.bor(0x80, bit.rshift(n,"..( 7*(i-ptr-1) ).."))\n"
-			end
-		end
-		func = func .. "\tp["..(i-1).."] = bit.band(0x7f, n)\n"
-	end
-	func = func .. "end\nend\n"
+	-- local func = [[
+	-- 	local ffi = require 'ffi'
+	-- 	local uint8_t  = ffi.typeof('uint8_t *')
+	-- 	return function(self,n)
+	-- ]]
+	-- for i = 1,9 do
+	-- 	local lim = bit.lshift(1ULL,7*i)
+	-- 	if i == 1 then
+	-- 		func = func .. "if n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
+	-- 	elseif i == 9 then
+	-- 		func = func .. "else --- < "..string.format("0x%xULL",tonumber(lim)).."\n"
+	-- 	else
+	-- 		func = func .. "elseif n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
+	-- 	end
+	-- 	func = func .. "\tlocal p = ffi.cast(uint8_t,self:alloc("..i.."))\n"
+	-- 	if i > 1 then
+	-- 		for ptr = 0,i-2 do
+	-- 			func = func .. "\tp["..ptr.."] = bit.bor(0x80, bit.rshift(n,"..( 7*(i-ptr-1) ).."))\n"
+	-- 		end
+	-- 	end
+	-- 	func = func .. "\tp["..(i-1).."] = bit.band(0x7f, n)\n"
+	-- end
+	-- func = func .. "end\nend\n"
 
-	buf.ber = dostring( func )
+	buf.ber = function (self, n)
+		local _ = { 0x80ULL,0x4000ULL,0x200000ULL,0x10000000ULL,0x800000000ULL,0x40000000000ULL,0x2000000000000ULL,0x100000000000000ULL }
 
-	local func = [[
-		local ffi = require 'ffi'
-		local uint8_t  = ffi.typeof('uint8_t *')
-		return function(self,n)
-	]]
-	for i = 1,9 do
-		local lim = bit.lshift(1ULL,7*i)
-		if i == 1 then
-			func = func .. "if n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
-		elseif i == 9 then
-			func = func .. "else --- < "..string.format("0x%xULL",tonumber(lim)).."\n"
-		else
-			func = func .. "elseif n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
-		end
-		func = func .. "\tlocal p = ffi.cast(uint8_t,self:alloc("..i.."))\n"
-		func = func .. "\tp[0] = bit.bor(0x80, n)\n"
-		if i > 1 then
-			for ptr = 1,i-2 do
-				func = func .. "\tp["..ptr.."] = bit.bor(0x80, bit.rshift(n,"..( 7*(ptr) ).."))\n"
-			end
-		end
-		func = func .. "\tp["..(i-1).."] = bit.band(0x7f, bit.rshift(n,"..( 7*(i-1) ).."))\n"
+		local bs = 1
+		while n >= _[bs] then bs = bs + 1 end
+
+		local p = ffi.cast(uint8_t, self:alloc(bs))
+		ffi.C.encode_reb(ffi.cast('uint64_t', n), p)
 	end
-	func = func .. "end\nend\n"
+
+	-- local func = [[
+	-- 	local ffi = require 'ffi'
+	-- 	local uint8_t  = ffi.typeof('uint8_t *')
+	-- 	return function(self,n)
+	-- ]]
+	-- for i = 1,9 do
+	-- 	local lim = bit.lshift(1ULL,7*i)
+	-- 	if i == 1 then
+	-- 		func = func .. "if n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
+	-- 	elseif i == 9 then
+	-- 		func = func .. "else --- < "..string.format("0x%xULL",tonumber(lim)).."\n"
+	-- 	else
+	-- 		func = func .. "elseif n < "..string.format("0x%xULL",tonumber(lim)).." then\n"
+	-- 	end
+	-- 	func = func .. "\tlocal p = ffi.cast(uint8_t,self:alloc("..i.."))\n"
+	-- 	func = func .. "\tp[0] = bit.bor(0x80, n)\n"
+	-- 	if i > 1 then
+	-- 		for ptr = 1,i-2 do
+	-- 			func = func .. "\tp["..ptr.."] = bit.bor(0x80, bit.rshift(n,"..( 7*(ptr) ).."))\n"
+	-- 		end
+	-- 	end
+	-- 	func = func .. "\tp["..(i-1).."] = bit.band(0x7f, bit.rshift(n,"..( 7*(i-1) ).."))\n"
+	-- end
+	-- func = func .. "end\nend\n"
 
 	-- print(func)
 
-	buf.reb = dostring( func )
+	-- buf.reb = dostring( func )
 
 	function buf:char(x)
 		local p = self:alloc(1)
